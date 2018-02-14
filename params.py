@@ -21,6 +21,7 @@ class Default:
     n_iter = 60 # Number of inversion iterations
     n_mels = 80
     duration = 2
+    n_ppgs = 61
 
     # mean_log_spec = -4.25
     # std_log_spec = 2.15
@@ -58,6 +59,8 @@ class Train1:
     display_step = 200
     training_epochs_num = 1000
     save_per_epoch = 2
+
+    seq_max_len =  200000 // Default.hop_length
 
 
 class Train2:

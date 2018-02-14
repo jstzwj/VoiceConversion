@@ -63,6 +63,8 @@ def get_mfccs_and_phones(wav_file, sr, trim=False, random_crop=True,
     # Load
     wav, sr = librosa.load(wav_file, sr=sr)
 
+    # print(len(wav))
+
     mfccs, _, _ = get_mfcc_log_spec_and_log_mel_spec(wav, params.Default.preemphasis, params.Default.n_fft,
                                                       params.Default.win_length,
                                                       params.Default.hop_length)
