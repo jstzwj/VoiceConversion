@@ -55,12 +55,12 @@ class Train1:
     # train
     batch_size = 32
     learning_rate = 0.0003
-    training_steps_num = 100
+    training_steps_num = 100000
     display_step = 200
-    training_epochs_num = 1000
+    training_epochs_num = 10
     save_per_epoch = 2
 
-    seq_max_len =  200000 // Default.hop_length
+    seq_max_len =  int(Default.duration / Default.frame_stride + 1)
 
 
 class Train2:

@@ -54,7 +54,7 @@ def get_mfcc_log_spec_and_log_mel_spec(wav, preemphasis_coeff, n_fft, win_length
 
     return mfccs.T, mag.T, mel.T  # (t, n_mfccs), (t, 1+n_fft/2), (t, n_mels)
 
-
+# @profile
 def get_mfccs_and_phones(wav_file, sr, trim=False, random_crop=True,
                          length=int(params.Default.duration / params.Default.frame_stride + 1)):
     '''This is applied in `train1` or `test1` phase.
@@ -122,23 +122,29 @@ def get_mfccs_and_phones(wav_file, sr, trim=False, random_crop=True,
             ppg_batch = numpy.concatenate((ppg_batch, ppg), 0)
 '''
 
+# @profile
 def get_batch(batch_size):
     '''Loads data.
     '''
 
-    with tf.device('/cpu:0'):
+    # with tf.device('/cpu:0'):
         # Load data
-        wav_files = glob.glob(params.Train1.data_path)
+    wav_files = glob.glob(params.Train1.data_path)
 
-        if len(wav_files) < batch_size:
-            raise Exception("Number of wav files is {}. It is less than batch size.".format(len(wav_files)))
+    if len(wav_files) < batch_size:
+        raise Exception("Number of wav files is {}. It is less than batch size.".format(len(wav_files)))
 
-        target_wavs = random.sample(wav_files, batch_size)
+    target_wavs = random.sample(wav_files, batch_size)
 
-        mfcc_batch, ppg_batch = zip(*map(lambda f:get_mfccs_and_phones(f, params.Default.sr), target_wavs))
+    mfcc_batch, ppg_batch = zip(*map(lambda f:get_mfccs_and_phones(f, params.Default.sr), target_wavs))
 
-        #print(mfcc_batch[0].shape)
-        #print(ppg_batch[0].shape)
+    seq_len = numpy.zeros(params.Train1.batch_size)
+    seq_len[:] = mfcc_batch[0].shape[0]
+
+    return mfcc_batch, ppg_batch, seq_len
+
+        # print(mfcc_batch[0].shape)
+        # print(ppg_batch[0].shape)
 
         # mfcc_batch = tf.convert_to_tensor(mfcc_batch, dtype=tf.float32)
         # ppg_batch = tf.convert_to_tensor(ppg_batch, dtype=tf.int32)
@@ -148,4 +154,4 @@ def get_batch(batch_size):
         #                                batch_size=batch_size,
         #                                capacity=batch_size * 32,
         #                                dynamic_pad=True)
-        return mfcc_batch, ppg_batch
+        

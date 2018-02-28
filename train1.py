@@ -8,8 +8,8 @@ import train1_loader
 def train(logdir = params.logdir_path + '/default/train1', queue = True):
     print("train1 start...")
 
-    x_mfcc = tf.placeholder(tf.float32, shape=(params.Train1.batch_size, None, params.Default.n_mfcc))
-    y_ppgs = tf.placeholder(tf.int32, shape=(params.Train1.batch_size, None,))
+    x_mfcc = tf.placeholder(tf.float32, shape=(params.Train1.batch_size, params.Train1.seq_max_len, params.Default.n_mfcc))
+    y_ppgs = tf.placeholder(tf.int32, shape=(params.Train1.batch_size, params.Train1.seq_max_len,))
     y_spec = tf.placeholder(tf.float32, shape=(params.Train1.batch_size, None, 1 + params.Default.n_fft // 2))
     y_mel = tf.placeholder(tf.float32, shape=(params.Train1.batch_size, None, params.Default.n_mels))
 
@@ -21,10 +21,10 @@ def train(logdir = params.logdir_path + '/default/train1', queue = True):
 
     # Define weights
     weights = {
-        'out': tf.Variable(tf.random_normal([params.Train1.hidden_units, params.Default.n_ppgs]))
+        'out': tf.Variable(tf.random_normal([params.Train1.hidden_units, params.Train1.seq_max_len]))
     }
     biases = {
-        'out': tf.Variable(tf.random_normal([params.Default.n_ppgs]))
+        'out': tf.Variable(tf.random_normal([params.Train1.seq_max_len]))
     }
 
 
@@ -64,6 +64,8 @@ def train(logdir = params.logdir_path + '/default/train1', queue = True):
         # Indexing
         outputs = tf.gather(tf.reshape(outputs, [-1, params.Train1.hidden_units]), index)
 
+        print(tf.shape(outputs))
+
         # Linear activation, using outputs computed above
         return tf.matmul(outputs, weights['out']) + biases['out']
 
@@ -74,11 +76,13 @@ def train(logdir = params.logdir_path + '/default/train1', queue = True):
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=params.Train1.learning_rate).minimize(cost)
 
     # Evaluate model
-    correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+    correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y_ppgs,1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
     # Initialize the variables (i.e. assign their default value)
     init = tf.global_variables_initializer()
+
+    saver = tf.train.Saver() # 生成saver
 
     # Start training
     with tf.Session() as sess:
@@ -88,15 +92,18 @@ def train(logdir = params.logdir_path + '/default/train1', queue = True):
 
         for epoch in range(1, params.Train1.training_epochs_num + 1):
             for step in range(1, params.Train1.training_steps_num+1):
-                mfcc, ppg = train1_loader.get_batch(params.Train1.batch_size)
+                mfcc, ppg, batch_seqlen = train1_loader.get_batch(params.Train1.batch_size)
                 # Run optimization op (backprop)
                 sess.run(optimizer, feed_dict={x_mfcc: mfcc, y_ppgs: ppg, seqlen: batch_seqlen})
                 if step % params.Train1.display_step == 0 or step == 1:
                     # Calculate batch loss and accuracy
-                    loss, acc = sess.run([loss_op, accuracy], feed_dict={x_mfcc: mfcc, y_ppgs: ppg, seqlen: batch_seqlen})
+                    acc, loss = sess.run([accuracy, cost], feed_dict={x_mfcc: mfcc, y_ppgs: ppg, seqlen: batch_seqlen})
                     print("Step " + str(step) + ", Minibatch Loss= " + \
                         "{:.4f}".format(loss) + ", Training Accuracy= " + \
                         "{:.3f}".format(acc))
+            print("epoch:" + str(epoch))
+        # save
+        saver.save(sess, logdir)
 
         print("Optimization Finished!")
 
